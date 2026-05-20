@@ -1,0 +1,71 @@
+# auth-service configuration
+# Скопируйте в config.yaml и заполните реальными значениями
+
+server:
+  host: "0.0.0.0"
+  port: 50053
+  metrics_port: 9093
+  shutdown_timeout: 30s
+  health_enabled: true
+  health_check_timeout: 2s   # таймаут health check
+
+database:
+  dsn: "postgres://user:password@auth-postgres:5432/auth?sslmode=disable"
+  max_conns: 20
+  min_conns: 2
+  max_conn_lifetime: 30m
+  max_conn_idle_time: 5m
+  health_check_period: 1m
+  retry_timeout: 30s
+  retry_interval: 2s
+  max_retries: 15
+
+redis:
+  addr: "redis:6379"
+  password: ""
+  db: 0
+  retry_timeout: 30s      # максимальное время попыток переподключения
+  retry_interval: 2s      # интервал между попытками
+  max_retries: 10
+  min_retry_backoff: 100ms
+  max_retry_backoff: 2s
+
+jwt:
+  secret: "change-me-to-a-long-random-string"
+
+rate_limit:
+  global:
+    rps: 500                # общий лимит на весь сервис
+    burst: 1000
+  per_method:
+    Register:
+      rps: 50               # регистрация — редкая операция, защита от спама
+      burst: 100
+    Login:
+      rps: 100              # логин — частая, но нужна защита от брутфорса
+      burst: 200
+    GetUserInfo:
+      rps: 200              # чтение профиля — лёгкая операция
+      burst: 400
+  per_user:
+    rps: 10                 # ~10 запросов/с на пользователя
+    burst: 20
+    max_inactive_age: 10m   # очистка лимитера неактивного пользователя
+
+grpc_backoff:
+  enabled: true
+  base_delay: 200ms
+  multiplier: 2.0
+  max_delay: 15s
+  max_attempts: 5
+
+logger:
+  slow_threshold: 200ms
+  log_normal_requests: false
+
+# Таймауты по операциям (gRPC методы)
+operation_timeouts:
+  "/auth.v1.AuthService/Register": 5s
+  "/auth.v1.AuthService/Login": 5s
+  "/auth.v1.AuthService/RefreshToken": 5s
+  "/auth.v1.AuthService/ValidateToken": 2s
